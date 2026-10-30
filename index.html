@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Khám Phá NST Giới Tính X - Y 3D</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        // DÁN URL CỦA APPS SCRIPT VÀO ĐÂY:
+        const GOOGLE_SHEET_URL = "https://script.google.com/macros/s/AKfycbxw8TA-QD7Unf8ebFZOsc59BjLZ-eQi3JC4Som-kYuZvX79I8yPXI-V-YqHPy9QfoV0/exec";
+
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bioDark: '#070b14',
+                        bioPanel: 'rgba(13, 20, 36, 0.90)',
+                        bioBorder: 'rgba(56, 189, 248, 0.25)',
+                        cyanGlow: '#00f2fe',
+                        rubyGlow: '#ff2a5f',
+                        sryGlow: '#ffd700'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050811;
+            color: #f1f5f9;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        canvas {
+            display: block;
+            outline: none;
+            touch-action: none;
+        }
+        .glass-panel {
+            background: rgba(10, 16, 31, 0.88);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+        }
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            touch-action: manipulation;
+        }
+        .glass-btn:active {
+            transform: scale(0.95);
+        }
+        .glass-btn:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.5);
+        }
+        .glass-btn.active {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.5), rgba(99, 102, 241, 0.5));
+            border-color: #38bdf8;
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            color: #ffffff;
+        }
+        .sry-highlight-card {
+            border-color: #ffd700 !important;
+            background: rgba(217, 119, 6, 0.4) !important;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.4) !important;
+        }
+        .callout-card {
+            position: absolute;
+            pointer-events: auto;
+            transition: opacity 0.2s ease;
+            z-index: 25;
+            white-space: nowrap;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        button { -webkit-tap-highlight-color: transparent; }
+        #info-drawer, #comparison-modal { overflow-y: auto; overscroll-behavior: contain; }
+        #info-description, #info-extra { overflow-wrap: anywhere; }
+        #webgl-container { min-width: 0; min-height: 0; }
+        @media (max-width: 767px) {
+            body { height: 100dvh; min-height: 100dvh; }
+            #mobile-control-drawer {
+                max-height: 72dvh;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                padding-bottom: max(1rem, env(safe-area-inset-bottom));
+            }
+            #info-drawer {
+                left: 8px !important;
+                right: 8px !important;
+                bottom: calc(48px + env(safe-area-inset-bottom)) !important;
+                max-height: 38dvh;
+                padding: 12px;
+                border-radius: 16px;
+            }
+            #comparison-modal {
+                left: 8px !important;
+                right: 8px !important;
+                bottom: calc(48px + env(safe-area-inset-bottom)) !important;
+                max-height: 34dvh;
+                overflow-x: auto;
+            }
+            #comparison-modal table { min-width: 260px; }
+            #callouts-container .callout-card {
+                max-width: 76px;
+                padding: 3px 5px;
+                font-size: 8px;
+                line-height: 1.15;
+                white-space: normal;
+                overflow-wrap: anywhere;
+            }
+            #callouts-container .callout-card span { font-size: 8px !important; }
+            #info-banner { max-width: calc(100vw - 112px); }
+            #quiz-modal { padding: 8px; }
+            #quiz-modal > div { max-height: 88dvh; overflow-y: auto; }
+        }
+        @media (max-width: 380px) {
+            #callouts-container .callout-card { max-width: 62px; }
+            header h1 { font-size: 10px; }
+            #btn-open-quiz { padding-left: 7px; padding-right: 7px; }
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden relative select-none">
+    
+    <header class="absolute top-2 left-2 right-2 z-30 flex items-center justify-between gap-2 pointer-events-none">
+        <div class="pointer-events-auto flex items-center gap-2 glass-panel px-3 py-1.5 rounded-xl border-cyan-500/30">
+            <div class="w-7 h-7 md:w-9 md:h-9 rounded-lg bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shrink-0">
+                <i class="fa-solid fa-dna text-xs md:text-base animate-spin" style="animation-duration: 12s;"></i>
+            </div>
+            <div>
+                <h1 class="text-[11px] md:text-base font-black tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-cyan-300 via-sky-200 to-indigo-300">
+                    NST GIỚI TÍNH X – Y
+                </h1>
+                <p class="text-[8px] md:text-[10px] text-cyan-200/80 font-medium">Sinh học 12 &bull; Hasam Science</p>
+            </div>
+        </div>
+        <div class="pointer-events-auto flex items-center gap-1.5">
+            <button id="btn-open-quiz" class="glass-btn px-2.5 py-1.5 rounded-xl text-[10px] md:text-xs font-bold text-amber-300 border-amber-500/40 flex items-center gap-1 shadow-lg shrink-0">
+                <i class="fa-solid fa-circle-question text-amber-400 text-xs animate-pulse"></i>
+                <span class="hidden xs:inline">Thử thách</span>
+            </button>
+            <button id="btn-toggle-labels" class="glass-btn px-2 py-1.5 rounded-xl text-[10px] md:text-xs font-semibold text-slate-200 flex items-center gap-1 shrink-0">
+                <i class="fa-solid fa-tags text-cyan-400 text-xs"></i>
+                <span id="label-btn-text" class="hidden sm:inline">Ẩn nhãn</span>
+            </button>
+            <button id="btn-open-menu-mobile" class="md:hidden glass-btn w-8 h-8 rounded-xl text-cyan-300 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-sliders text-xs"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="relative w-full h-full flex-grow">
+        <!-- 3D WebGL Canvas -->
+        <div id="webgl-container" class="w-full h-full"></div>
+        <svg id="leader-lines-svg" class="absolute inset-0 w-full h-full pointer-events-none z-20"></svg>
+        <div id="callouts-container" class="absolute inset-0 pointer-events-none z-25 overflow-hidden"></div>
+        
+        <!-- Nút điều khiển Zoom thu gọn góc trái -->
+        <div class="absolute top-14 left-2 z-20 flex flex-col gap-1 pointer-events-auto">
+            <div class="flex items-center gap-1 bg-slate-950/60 backdrop-blur-md p-1 rounded-lg border border-cyan-500/20">
+                <button id="touch-zoom-in" class="glass-btn w-7 h-7 rounded-md text-cyan-300 flex items-center justify-center font-bold text-xs">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <button id="touch-zoom-out" class="glass-btn w-7 h-7 rounded-md text-cyan-300 flex items-center justify-center font-bold text-xs">
+                    <i class="fa-solid fa-minus"></i>
+                </button>
+                <button id="btn-reset-view" class="glass-btn w-7 h-7 rounded-md text-indigo-300 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- THÔNG BÁO BANNER -->
+        <div id="info-banner" class="absolute top-14 left-1/2 -translate-x-1/2 max-w-[90vw] z-30 glass-panel px-3 py-1.5 rounded-full text-[10px] md:text-xs font-semibold text-cyan-200 border-cyan-500/40 shadow-2xl transition-all duration-300 opacity-0 pointer-events-none flex items-center justify-center gap-1.5 text-center truncate">
+            <i class="fa-solid fa-circle-info text-cyan-400 text-xs shrink-0"></i>
+            <span id="info-banner-text" class="truncate">Thông báo...</span>
+        </div>
+
+        <!-- PANEL ĐIỀU KHIỂN -->
+        <div id="mobile-control-drawer" class="fixed md:absolute inset-x-0 bottom-0 md:top-16 md:bottom-auto md:right-3 md:left-auto z-40 bg-slate-950/95 md:bg-transparent backdrop-blur-xl md:backdrop-blur-none p-4 md:p-0 rounded-t-3xl md:rounded-none border-t border-cyan-500/30 md:border-0 transform translate-y-full md:translate-y-0 transition-transform duration-300 ease-in-out md:w-60 space-y-3 pointer-events-auto">
+            <div class="flex md:hidden justify-between items-center pb-2 border-b border-slate-800">
+                <span class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders"></i> Bảng Điều Khiển Mô Phỏng
+                </span>
+                <button id="close-mobile-drawer" class="text-slate-400 hover:text-white p-1 text-sm"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <!-- Cặp NST & Trạng Thái -->
+            <div class="glass-panel p-2.5 rounded-xl border-cyan-500/20 space-y-2">
+                <div class="flex justify-between items-center text-[10px] font-extrabold uppercase text-cyan-400">
+                    <span><i class="fa-solid fa-dna mr-1"></i> Cặp NST</span>
+                    <span>Dạng NST</span>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button id="pair-xy" class="glass-btn active py-1 rounded-lg text-xs font-bold">XY (Nam)</button>
+                    <button id="pair-xx" class="glass-btn py-1 rounded-lg text-xs font-bold">XX (Nữ)</button>
+                </div>
+                <div class="grid grid-cols-2 gap-1.5 pt-1 border-t border-slate-800">
+                    <button id="btn-state-single" class="glass-btn py-1 rounded-lg text-[10px] font-bold">Chưa nhân đôi</button>
+                    <button id="btn-state-double" class="glass-btn active py-1 rounded-lg text-[10px] font-bold">Đã nhân đôi</button>
+                </div>
+            </div>
+
+            <!-- Chế độ xem & Lọc vùng -->
+            <div class="glass-panel p-2.5 rounded-xl border-cyan-500/20 space-y-2">
+                <div class="text-[10px] font-extrabold uppercase text-cyan-400"><i class="fa-solid fa-filter mr-1"></i> Chế độ & Lọc vùng</div>
+                <div class="grid grid-cols-2 gap-1.5">
+                    <button id="mode-explore" class="glass-btn py-1 px-2 rounded-lg text-[10px] font-medium active">Tự do 360°</button>
+                    <button id="mode-compare" class="glass-btn py-1 px-2 rounded-lg text-[10px] font-medium">So sánh X - Y</button>
+                </div>
+                <div class="pt-1 border-t border-slate-800 grid grid-cols-2 gap-1">
+                    <button id="btn-show-spec-x" class="glass-btn py-1 px-1.5 rounded-lg text-[9px] font-medium text-cyan-300 truncate">
+                        <i class="fa-solid fa-dna mr-1"></i>Vùng đ.trưng X
+                    </button>
+                    <button id="btn-show-spec-y" class="glass-btn py-1 px-1.5 rounded-lg text-[9px] font-medium text-cyan-300 truncate">
+                        <i class="fa-solid fa-dna mr-1"></i>Vùng đ.trưng Y
+                    </button>
+                </div>
+                <div class="pt-1 border-t border-slate-800">
+                    <button id="btn-show-diff" class="w-full glass-btn py-1 px-2 rounded-lg text-[10px] font-medium text-amber-300">Gene SRY</button>
+                </div>
+            </div>
+            
+            <button id="btn-drawer-apply" class="md:hidden w-full py-2 bg-gradient-to-r from-cyan-500 to-indigo-600 rounded-xl text-xs font-bold text-white shadow-lg">
+                Áp dụng & Đóng
+            </button>
+        </div>
+
+        <!-- Panel So Sánh Đặc Điểm -->
+        <div id="comparison-modal" class="absolute left-2 right-2 bottom-12 md:left-4 md:right-auto md:bottom-20 z-30 glass-panel p-3 rounded-xl border-cyan-500/40 md:max-w-xs hidden">
+            <div class="flex justify-between items-center mb-1.5 pb-1 border-b border-slate-700/80">
+                <h3 class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                    <i class="fa-solid fa-table"></i> So Sánh Đặc Điểm X & Y
+                </h3>
+                <button id="close-comp-modal" class="text-slate-400 hover:text-white text-xs"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <table class="w-full table-fixed text-[10px] text-left text-slate-200 border-separate border-spacing-0">
+                <thead>
+                    <tr class="bg-slate-900/95">
+                        <th scope="col" class="w-[34%] py-2 px-1 text-left font-bold text-slate-200 border-b border-slate-600">Đặc điểm</th>
+                        <th scope="col" class="w-[33%] py-2 px-1 text-center font-black text-cyan-200 border-b border-cyan-500/60">NST X</th>
+                        <th scope="col" class="w-[33%] py-2 px-1 text-center font-black text-amber-200 border-b border-amber-500/60">NST Y</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-700/80">
+                    <tr>
+                        <td class="py-1.5 px-1 font-medium">Vùng đặc trưng</td>
+                        <td class="py-1.5 px-1 text-center text-cyan-100">Có</td>
+                        <td class="py-1.5 px-1 text-center text-amber-100">Có</td>
+                    </tr>
+                    <tr>
+                        <td class="py-1 font-medium">Đoạn PAR1 & PAR2</td>
+                        <td class="py-1.5 px-1 text-center font-semibold text-emerald-300">Có</td>
+                        <td class="py-1.5 px-1 text-center font-semibold text-emerald-300">Có</td>
+                    </tr>
+                    <tr class="bg-amber-500/10">
+                        <td class="py-1.5 px-1 font-bold text-amber-200">Gene SRY</td>
+                        <td class="py-1.5 px-1 text-center font-bold text-slate-100 bg-slate-800/80">Không có SRY</td>
+                        <td class="py-1.5 px-1 text-center font-black text-amber-200 bg-amber-500/15">Có SRY</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="info-drawer" class="absolute left-2 right-2 bottom-12 md:left-auto md:right-4 md:bottom-20 z-30 glass-panel p-3.5 rounded-2xl border-2 border-cyan-500/40 md:max-w-sm hidden shadow-2xl backdrop-blur-2xl">
+            <div class="flex justify-between items-start mb-2 pb-1 border-b border-slate-700/60">
+                <div class="flex items-center gap-2">
+                    <span id="info-badge" class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 tracking-wider">
+                        Thông tin
+                    </span>
+                    <h3 id="info-title" class="text-xs md:text-sm font-extrabold text-white tracking-wide">Tiêu đề</h3>
+                </div>
+                <button id="close-info-drawer" class="text-slate-400 hover:text-white text-xs transition-colors p-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p id="info-description" class="text-[11px] md:text-xs text-slate-200 leading-relaxed font-normal">
+                Nội dung mô tả...
+            </p>
+            <p class="mt-2 text-[9px] text-slate-400 italic">Lưu ý: Đây là mô hình minh họa, không theo tỉ lệ kích thước thực của NST hoặc vị trí gene.</p>
+            <div id="info-extra" class="mt-2.5 text-[10px] md:text-[11px] text-cyan-200 bg-slate-900/80 p-2 rounded-xl border border-cyan-500/30 font-medium">
+            </div>
+        </div>
+
+        <!-- Thanh Gợi Mở Dưới Cùng Tin Gọn -->
+        <div class="absolute bottom-2 left-2 right-2 z-20 flex items-center justify-end gap-1.5 pointer-events-auto">
+            <button id="btn-bar-quiz" class="glass-btn px-2.5 py-1.5 rounded-xl text-[10px] md:text-xs font-bold text-amber-300 bg-amber-950/50 border-amber-500/40 flex items-center gap-1 shrink-0">
+                <i class="fa-solid fa-brain text-amber-400 text-xs"></i>
+                <span>Thử thách</span>
+            </button>
+        </div>
+
+        <div id="quiz-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 hidden">
+            <div class="glass-panel p-4 rounded-2xl max-w-lg w-full border-2 border-amber-500/40 shadow-2xl space-y-3 relative max-h-[90vh] overflow-y-auto">
+                <button id="close-quiz" class="absolute top-3 right-3 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-base"></i></button>
+                
+                <div class="flex justify-between items-center pb-2 border-b border-slate-700/80 pr-6">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 rounded-lg bg-amber-500 flex items-center justify-center text-slate-950 text-xs font-bold">
+                            <i class="fa-solid fa-brain"></i>
+                        </div>
+                        <h2 class="text-xs font-black text-white">THỬ THÁCH SINH HỌC 12</h2>
+                    </div>
+                    <div id="quiz-header-progress" class="text-right hidden">
+                        <span id="quiz-progress-text" class="text-[10px] font-bold text-slate-300">Câu 1/3</span>
+                        <div class="text-[10px] font-bold text-emerald-400">Điểm: <span id="quiz-score">0</span></div>
+                    </div>
+                </div>
+
+                <!-- BƯỚC 1: NHẬP THÔNG TIN HỌC SINH -->
+                <div id="quiz-user-info" class="space-y-4 py-2">
+                    <div class="text-center space-y-1">
+                        <div class="w-12 h-12 rounded-full bg-amber-500/20 border border-amber-400 text-amber-400 flex items-center justify-center text-xl mx-auto">
+                            <i class="fa-solid fa-user-graduate"></i>
+                        </div>
+                        <h3 class="text-sm font-bold text-white">Thông Tin Học Sinh</h3>
+                        <p class="text-[11px] text-slate-300">Vui lòng điền Họ tên và Lớp để bắt đầu tham gia thử thách nhé!</p>
+                    </div>
+                    <form id="form-student-info" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-cyan-300 mb-1">
+                                <i class="fa-solid fa-user text-xs mr-1"></i> Họ và Tên:
+                            </label>
+                            <input type="text" id="student-name" required placeholder="Ví dụ: Nguyễn Văn A" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-cyan-300 mb-1">
+                                <i class="fa-solid fa-graduation-cap text-xs mr-1"></i> Lớp:
+                            </label>
+                            <input type="text" id="student-class" required placeholder="Ví dụ: 12A1" class="w-full px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 transition-colors">
+                        </div>
+                        <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs shadow-lg transition-all flex items-center justify-center gap-2 mt-2">
+                            <span>BẮT ĐẦU LÀM BÀI</span>
+                            <i class="fa-solid fa-play text-xs"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- BƯỚC 2: NỘI DUNG CÂU HỎI -->
+                <div id="quiz-content" class="space-y-3 hidden">
+                    <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                        <h3 id="quiz-question-title" class="text-xs font-bold text-white leading-relaxed">
+                            Nội dung câu hỏi...
+                        </h3>
+                    </div>
+                    <div id="quiz-options" class="space-y-1.5"></div>
+                    <div id="quiz-feedback" class="hidden p-2.5 rounded-xl border text-xs space-y-2">
+                        <div class="flex items-center justify-between font-bold" id="quiz-feedback-status"></div>
+                        <p id="quiz-feedback-text" class="text-[10px] text-slate-200 leading-relaxed"></p>
+                        <div class="pt-1 flex justify-between items-center gap-2">
+                            <button id="btn-quiz-view-3d" class="px-2 py-1 rounded bg-cyan-500/20 text-cyan-300 font-semibold text-[10px] flex items-center gap-1">
+                                <i class="fa-solid fa-eye"></i> Xem 3D
+                            </button>
+                            <button id="btn-quiz-next" class="px-3 py-1 rounded bg-amber-500 text-slate-950 font-bold text-[10px] flex items-center gap-1">
+                                <span>Kế tiếp</span> <i class="fa-solid fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BƯỚC 3: KẾT QUẢ / TỔNG KẾT -->
+                <div id="quiz-summary" class="hidden text-center py-4 space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-400 flex items-center justify-center text-xl mx-auto">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                    <h3 class="text-sm font-black text-white">HOÀN THÀNH THỬ THÁCH!</h3>
+                    
+                    <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-left space-y-1">
+                        <p class="text-xs text-slate-300"><span class="text-slate-400">Học sinh:</span> <strong id="summary-student-name" class="text-cyan-300">...</strong></p>
+                        <p class="text-xs text-slate-300"><span class="text-slate-400">Lớp:</span> <strong id="summary-student-class" class="text-cyan-300">...</strong></p>
+                        <p class="text-xs text-slate-300"><span class="text-slate-400">Kết quả đạt được:</span> <span id="summary-score" class="font-bold text-amber-400">0/100</span></p>
+                    </div>
+                    <p id="summary-comment" class="text-[11px] text-cyan-300 bg-slate-900/80 p-2.5 rounded-xl border border-cyan-500/30 inline-block">
+                        Xuất sắc!
+                    </p>
+                    
+                    <!-- Dòng trạng thái đang gửi điểm sang Google Sheet -->
+                    <div id="sending-status" class="text-[11px] font-bold text-cyan-400 animate-pulse flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-spinner animate-spin"></i> Đang tự động lưu kết quả vào Google Sheet...
+                    </div>
+
+                    <div class="pt-2 flex justify-center gap-2">
+                        <button id="btn-restart-quiz" class="px-3 py-1.5 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs">
+                            <i class="fa-solid fa-rotate-right mr-1"></i> Thử lại
+                        </button>
+                        <button id="btn-close-summary" class="px-3 py-1.5 rounded-xl bg-slate-800 text-white font-bold text-xs border border-slate-700">
+                            Đóng
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let scene, camera, renderer, controls;
+        let chromosomeXGroup, chromosomeYGroup, connectorLinesGroup;
+        let raycaster, mouse;
+        let isDuplicatedState = true;
+        let currentMode = 'explore';
+        let currentPairType = 'XY';
+        let labelsVisible = true;
+        let chromatinBumpTex;
+        
+        let studentName = '';
+        let studentClass = '';
+
+        function playSound(isCorrect) {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (isCorrect) {
+                    const osc1 = ctx.createOscillator(), osc2 = ctx.createOscillator(), gain = ctx.createGain();
+                    osc1.type = 'sine'; osc2.type = 'sine';
+                    osc1.frequency.setValueAtTime(523.25, ctx.currentTime);
+                    osc2.frequency.setValueAtTime(659.25, ctx.currentTime);
+                    osc1.frequency.exponentialRampToValueAtTime(783.99, ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+                    osc1.connect(gain); osc2.connect(gain); gain.connect(ctx.destination);
+                    osc1.start(); osc2.start(); osc1.stop(ctx.currentTime + 0.4); osc2.stop(ctx.currentTime + 0.4);
+                } else {
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160, ctx.currentTime);
+                    osc.frequency.setValueAtTime(110, ctx.currentTime + 0.15);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 0.3);
+                }
+            } catch (e) {}
+        }
+
+        const QUIZ_DATA = [
+            {
+                type: 'mcq',
+                question: 'Khái niệm nào sau đây mô tả ĐÚNG về Nhiễm sắc thể (NST) giới tính?',
+                options: [
+                    'Chỉ duy nhất chứa các gene quy định giới tính nam hoặc nữ.',
+                    'Chứa gene quy định giới tính và cả các gene quy định tính trạng thường.',
+                    'Luôn chỉ tồn tại thành cặp tương đồng XX trong mọi loại tế bào.',
+                    'Chỉ xuất hiện trong giao tử và hoàn toàn tiêu biến ở tế bào sinh dưỡng.'
+                ],
+                correct: 1,
+                points: 34,
+                explanation: 'Đúng! NST giới tính chứa cả gene quy định giới tính (như SRY) và gene quy định tính trạng thường (mù màu, máu khó đông...).',
+                targetRegion: 'SPECIFIC_X'
+            },
+            {
+                type: 'fill',
+                question: 'Hoàn thành câu sau bằng cách chọn đáp án đúng từ danh sách thả xuống (Dropdown):',
+                template: 'Ở giới dị giao tử (như Nam ở người), cặp NST giới tính tồn tại thành cặp không tương đồng [select].',
+                options: ['-- Chọn đáp án --', 'XX', 'XY', 'XO', 'ZZ'],
+                correct: 'XY',
+                points: 33,
+                explanation: 'Chính xác! Nam giới có cặp NST giới tính XY là cặp không tương đồng.',
+                targetRegion: 'PAR1_X'
+            },
+            {
+                type: 'match3',
+                question: 'Ghép mỗi thông tin ở Cột A (1, 2, 3) với Vùng vị trí tương ứng phù hợp ở Cột B:',
+                leftItems: [
+                    { id: 'l1', title: '1. Gene SRY', desc: 'Quyết định phát triển giới tính Nam' },
+                    { id: 'l2', title: '2. Đoạn PAR1 / PAR2', desc: 'Có khả năng tiếp hợp, trao đổi chéo giữa X và Y' },
+                    { id: 'l3', title: '3. Gene mù màu / Máu khó đông', desc: 'Nằm trên vùng không tương đồng của NST X' }
+                ],
+                rightOptions: [
+                    { id: 'r1', text: 'Vùng tương đồng (PAR) trên NST X và Y' },
+                    { id: 'r2', text: 'Vùng đặc trưng riêng biệt trên NST Y' },
+                    { id: 'r3', text: 'Vùng đặc trưng riêng biệt trên NST X' }
+                ],
+                correctMatch: { 'l1': 'r2', 'l2': 'r1', 'l3': 'r3' },
+                points: 33,
+                explanation: 'Chính xác! SRY thuộc vùng đặc trưng Y, PAR là vùng tương đồng X-Y, và gene mù màu thuộc vùng đặc trưng X.',
+                targetRegion: 'SRY'
+            }
+        ];
+
+        let currentQuizIndex = 0;
+        let currentQuizScore = 0;
+        let quizAnswered = false;
+        let userMatchSelection = {};
+
+        function openQuizModal() {
+            document.getElementById('quiz-modal').classList.remove('hidden');
+            if (!studentName || !studentClass) {
+                document.getElementById('quiz-user-info').classList.remove('hidden');
+                document.getElementById('quiz-content').classList.add('hidden');
+                document.getElementById('quiz-summary').classList.add('hidden');
+                document.getElementById('quiz-header-progress').classList.add('hidden');
+            } else {
+                startQuizWithStudentInfo();
+            }
+        }
+
+        function startQuizWithStudentInfo() {
+            const nameInput = document.getElementById('student-name');
+            const classInput = document.getElementById('student-class');
+            const inputName = nameInput ? nameInput.value.trim() : '';
+            const inputClass = classInput ? classInput.value.trim() : '';
+
+            // Chỉ bắt đầu khi cả họ tên và lớp đều được nhập.
+            if (!inputName || !inputClass) {
+                if (nameInput && !inputName) nameInput.focus();
+                else if (classInput && !inputClass) classInput.focus();
+                showBanner('Vui lòng nhập đầy đủ họ tên và lớp trước khi bắt đầu!');
+                return;
+            }
+            if (!Array.isArray(QUIZ_DATA) || QUIZ_DATA.length === 0) {
+                showBanner('Chưa tải được bộ câu hỏi. Vui lòng tải lại trang và thử lại.');
+                return;
+            }
+
+            studentName = inputName;
+            studentClass = inputClass;
+            currentQuizIndex = 0;
+            currentQuizScore = 0;
+            quizAnswered = false;
+            document.getElementById('quiz-score').innerText = '0';
+            document.getElementById('quiz-user-info').classList.add('hidden');
+            document.getElementById('quiz-header-progress').classList.remove('hidden');
+            document.getElementById('quiz-content').classList.remove('hidden');
+            document.getElementById('quiz-summary').classList.add('hidden');
+            renderQuizQuestion();
+        }
+
+        function renderQuizQuestion() {
+            quizAnswered = false;
+            userMatchSelection = {};
+            const q = QUIZ_DATA[currentQuizIndex];
+            document.getElementById('quiz-progress-text').innerText = `Câu ${currentQuizIndex + 1}/${QUIZ_DATA.length}`;
+            document.getElementById('quiz-question-title').innerText = q.question;
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+            document.getElementById('quiz-feedback').classList.add('hidden');
+            if (q.type === 'mcq') {
+                q.options.forEach((optText, index) => {
+                    const btn = document.createElement('button');
+                    btn.className = 'w-full text-left p-2 rounded-lg glass-btn border border-slate-700 text-[11px] font-medium text-slate-200 flex items-center gap-2 transition-all';
+                    btn.innerHTML = `<span class="w-4 h-4 rounded-full bg-slate-800 text-amber-300 font-bold flex items-center justify-center text-[9px] shrink-0">${String.fromCharCode(65 + index)}</span><span>${optText}</span>`;
+                    btn.addEventListener('click', () => handleMCQAnswer(index));
+                    optionsContainer.appendChild(btn);
+                });
+            } else if (q.type === 'fill') {
+                const fillWrapper = document.createElement('div');
+                fillWrapper.className = 'space-y-3';
+                
+                const sentenceBox = document.createElement('div');
+                sentenceBox.className = 'text-xs text-slate-200 p-3 bg-slate-900/90 rounded-xl border border-slate-800 leading-relaxed';
+                
+                const parts = q.template.split('[select]');
+                sentenceBox.innerHTML = `
+                    <span>${parts[0]}</span>
+                    <select id="fill-dropdown-select" class="inline-block mx-1 px-2 py-1 my-1 rounded-lg bg-slate-950 border-2 border-amber-400 font-bold text-amber-300 text-xs focus:outline-none focus:border-cyan-400 cursor-pointer shadow-md">
+                        ${q.options.map(opt => `<option value="${opt}" class="bg-slate-900 text-white font-medium">${opt}</option>`).join('')}
+                    </select>
+                    <span>${parts[1] || ''}</span>
+                `;
+                fillWrapper.appendChild(sentenceBox);
+                const submitBtn = document.createElement('button');
+                submitBtn.className = 'w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5';
+                submitBtn.innerHTML = `<i class="fa-solid fa-paper-plane text-xs"></i> <span>Xác nhận câu trả lời</span>`;
+                
+                const selectElem = sentenceBox.querySelector('#fill-dropdown-select');
+                submitBtn.addEventListener('click', () => {
+                    const val = selectElem.value;
+                    if (val === '-- Chọn đáp án --') {
+                        showBanner('Vui lòng chọn một đáp án trước!');
+                        return;
+                    }
+                    handleFillAnswer(val, selectElem, submitBtn);
+                });
+                fillWrapper.appendChild(submitBtn);
+                optionsContainer.appendChild(fillWrapper);
+            } else if (q.type === 'match3') {
+                const matchWrapper = document.createElement('div');
+                matchWrapper.className = 'space-y-3 text-xs';
+                const listContainer = document.createElement('div');
+                listContainer.className = 'space-y-2.5 max-h-[50vh] overflow-y-auto pr-1';
+                q.leftItems.forEach((item) => {
+                    const card = document.createElement('div');
+                    card.className = 'p-2.5 bg-slate-900/90 rounded-xl border border-slate-800 space-y-1.5';
+                    
+                    card.innerHTML = `
+                        <div>
+                            <div class="font-bold text-cyan-300 text-[11px]">${item.title}</div>
+                            <div class="text-[10px] text-slate-300">${item.desc}</div>
+                        </div>
+                        <div class="pt-1">
+                            <label class="block text-[9px] font-bold text-amber-400 uppercase mb-1">Ghép với Cột B:</label>
+                            <select id="match-select-${item.id}" class="match-dropdown-item w-full px-2 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-200 text-[10px] focus:outline-none focus:border-cyan-400 cursor-pointer">
+                                <option value="">-- Chọn vị trí ghép nối tương ứng --</option>
+                                ${q.rightOptions.map(opt => `<option value="${opt.id}">${opt.text}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                    listContainer.appendChild(card);
+                });
+                matchWrapper.appendChild(listContainer);
+                const submitBtn = document.createElement('button');
+                submitBtn.className = 'w-full py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center gap-1.5';
+                submitBtn.innerHTML = `<i class="fa-solid fa-check-double text-xs"></i> <span>Nộp bài ghép nối</span>`;
+                
+                submitBtn.addEventListener('click', () => {
+                    const selections = {};
+                    let allSelected = true;
+                    q.leftItems.forEach(item => {
+                        const sel = matchWrapper.querySelector(`#match-select-${item.id}`).value;
+                        if (!sel) allSelected = false;
+                        selections[item.id] = sel;
+                    });
+                    if (!allSelected) {
+                        showBanner('Vui lòng ghép nối đầy đủ cả 3 ý!');
+                        return;
+                    }
+                    handleMatch3Answer(selections, matchWrapper, submitBtn);
+                });
+                matchWrapper.appendChild(submitBtn);
+                optionsContainer.appendChild(matchWrapper);
+            }
+        }
+
+        function handleMCQAnswer(selectedIndex) {
+            if (quizAnswered) return;
+            quizAnswered = true;
+            const q = QUIZ_DATA[currentQuizIndex];
+            const isCorrect = selectedIndex === q.correct;
+            playSound(isCorrect);
+            if (isCorrect) {
+                currentQuizScore += q.points;
+                document.getElementById('quiz-score').innerText = currentQuizScore;
+            }
+            const optionBtns = document.getElementById('quiz-options').children;
+            Array.from(optionBtns).forEach((btn, idx) => {
+                btn.disabled = true;
+                if (idx === q.correct) btn.classList.add('bg-emerald-950/80', 'border-emerald-400');
+                else if (idx === selectedIndex) btn.classList.add('bg-rose-950/80', 'border-rose-500');
+            });
+            showFeedback(isCorrect, q.explanation);
+        }
+
+        function handleFillAnswer(selectedOpt, selectElem, submitBtn) {
+            if (quizAnswered) return;
+            quizAnswered = true;
+            const q = QUIZ_DATA[currentQuizIndex];
+            const isCorrect = selectedOpt === q.correct;
+            playSound(isCorrect);
+            
+            selectElem.disabled = true;
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            if (isCorrect) {
+                currentQuizScore += q.points;
+                document.getElementById('quiz-score').innerText = currentQuizScore;
+                selectElem.className = 'inline-block mx-1 px-2 py-1 my-1 rounded-lg bg-emerald-950 border-2 border-emerald-400 font-bold text-emerald-300 text-xs';
+            } else {
+                selectElem.className = 'inline-block mx-1 px-2 py-1 my-1 rounded-lg bg-rose-950 border-2 border-rose-500 font-bold text-rose-300 text-xs';
+            }
+            showFeedback(isCorrect, q.explanation);
+        }
+
+        function handleMatch3Answer(selections, matchWrapper, submitBtn) {
+            if (quizAnswered) return;
+            quizAnswered = true;
+            const q = QUIZ_DATA[currentQuizIndex];
+            
+            let correctCount = 0;
+            q.leftItems.forEach(item => {
+                const isItemCorrect = selections[item.id] === q.correctMatch[item.id];
+                if (isItemCorrect) correctCount++;
+                const selectElem = matchWrapper.querySelector(`#match-select-${item.id}`);
+                selectElem.disabled = true;
+                if (isItemCorrect) {
+                    selectElem.classList.add('border-emerald-400', 'text-emerald-300', 'bg-emerald-950/80');
+                } else {
+                    selectElem.classList.add('border-rose-500', 'text-rose-300', 'bg-rose-950/80');
+                }
+            });
+            const isAllCorrect = correctCount === q.leftItems.length;
+            playSound(isAllCorrect);
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            if (isAllCorrect) {
+                currentQuizScore += q.points;
+            } else {
+                currentQuizScore += Math.round((q.points / q.leftItems.length) * correctCount);
+            }
+            document.getElementById('quiz-score').innerText = currentQuizScore;
+            showFeedback(isAllCorrect, isAllCorrect ? q.explanation : `Bạn đúng ${correctCount}/${q.leftItems.length} vế ghép nối. ${q.explanation}`);
+        }
+
+        function showFeedback(isCorrect, explanationText) {
+            const feedbackEl = document.getElementById('quiz-feedback');
+            document.getElementById('quiz-feedback-status').innerHTML = isCorrect 
+                ? `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> CHÍNH XÁC!</span>`
+                : `<span class="text-rose-400"><i class="fa-solid fa-circle-xmark"></i> CHƯA ĐÚNG!</span>`;
+            document.getElementById('quiz-feedback-text').innerText = explanationText;
+            feedbackEl.classList.remove('hidden');
+        }
+
+        // HÀM TỰ ĐỘNG GỬI KẾT QUẢ SANG GOOGLE SHEET
+        function sendResultToGoogleSheet() {
+            const statusEl = document.getElementById('sending-status');
+            if (!GOOGLE_SHEET_URL || GOOGLE_SHEET_URL.includes("DÁN_LINK_WEB_APP")) {
+                if (statusEl) statusEl.innerHTML = `<span class="text-amber-400"><i class="fa-solid fa-triangle-exclamation"></i> Chưa cấu hình URL Google Sheet!</span>`;
+                return;
+            }
+
+            if (statusEl) statusEl.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Đang tự động lưu kết quả vào Google Sheet...`;
+
+            const now = new Date();
+            const timestamp = now.toLocaleString('vi-VN');
+
+            const payload = {
+                timestamp: timestamp,
+                name: studentName,
+                className: studentClass,
+                score: currentQuizScore
+            };
+
+            fetch(GOOGLE_SHEET_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                if (statusEl) statusEl.innerHTML = `<span class="text-emerald-400"><i class="fa-solid fa-circle-check"></i> Đã lưu kết quả thành công!</span>`;
+            })
+            .catch(err => {
+                console.error("Lỗi gửi dữ liệu:", err);
+                if (statusEl) statusEl.innerHTML = `<span class="text-rose-400"><i class="fa-solid fa-circle-xmark"></i> Lỗi khi gửi dữ liệu!</span>`;
+            });
+        }
+
+        function showQuizSummary() {
+            document.getElementById('quiz-content').classList.add('hidden');
+            document.getElementById('quiz-header-progress').classList.add('hidden');
+            document.getElementById('quiz-summary').classList.remove('hidden');
+            
+            document.getElementById('summary-student-name').innerText = studentName || 'Học sinh';
+            document.getElementById('summary-student-class').innerText = studentClass || 'Chưa cập nhật';
+            document.getElementById('summary-score').innerText = `${currentQuizScore}/100`;
+            const commentEl = document.getElementById('summary-comment');
+            if (currentQuizScore >= 100) {
+                commentEl.innerText = 'Xuất sắc tuyệt đối! Bạn trả lời chính xác tất cả các dạng câu hỏi!';
+            } else if (currentQuizScore >= 60) {
+                commentEl.innerText = 'Khá tốt! Hãy ôn tập lại một số vùng gene để hoàn thiện nhé!';
+            } else {
+                commentEl.innerText = 'Cố gắng lên! Quan sát mô hình 3D nhiều hơn để ghi nhớ bài nhé!';
+            }
+
+            // Gửi điểm số lên Google Sheet ngay khi hoàn thành
+            sendResultToGoogleSheet();
+        }
+
+        const COLORS = { X_BODY: 0x2563eb, Y_BODY: 0x8b5cf6, PAR: 0xff2a5f, SRY: 0xffd700, HIGHLIGHT: 0x00f2fe };
+        
+        function generateChromatinTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256; canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, 256, 256);
+            const imgData = ctx.getImageData(0, 0, 256, 256);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                const noise = (Math.random() - 0.5) * 30;
+                imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = Math.min(255, Math.max(0, 128 + noise));
+            }
+            ctx.putImageData(imgData, 0, 0);
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+            texture.repeat.set(2, 8);
+            return texture;
+        }
+
+        function createOrganicChromatidMesh(pointArray, radius, colorHex, regionData) {
+            const curve = new THREE.CatmullRomCurve3(pointArray);
+            const geometry = new THREE.TubeGeometry(curve, 32, radius, 16, false);
+            const material = new THREE.MeshStandardMaterial({
+                color: colorHex, roughness: 0.35, metalness: 0.1,
+                bumpMap: chromatinBumpTex, bumpScale: 0.008
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.userData = { region: regionData };
+            const capGeo = new THREE.SphereGeometry(radius, 16, 16);
+            [pointArray[0], pointArray[pointArray.length - 1]].forEach(p => {
+                const cap = new THREE.Mesh(capGeo, material);
+                cap.position.copy(p);
+                cap.userData = { region: regionData };
+                mesh.add(cap);
+            });
+            return mesh;
+        }
+
+        const REGIONS = {
+            CENTROMERE: { 
+                id: 'CENTROMERE', 
+                name: 'Tâm động (Centromere)', 
+                badge: 'Thắt sơ cấp', 
+                desc: 'Vùng thắt sơ cấp của NST. Khi NST đã nhân đôi, hai chromatid chị em gắn với nhau tại vùng tâm động; là nơi đính với thoi phân bào.', 
+                extra: 'Là vị trí liên kết của nhiễm sắc thể với thoi phân bào, giúp nhiễm sắc thể có thể di chuyển về các cực của tế bào trong quá trình phân bào.'
+
+            },
+            PAR1_X: { 
+                id: 'PAR1_X', 
+                name: 'PAR1 – Vùng tương đồng', 
+                badge: 'Mút ngắn (p)', 
+                desc: 'PAR1 là vùng tương đồng trên NST X và Y.', 
+                extra: 'Vùng tương đồng trên X và Y có các trình tự DNA và gene tương ứng, hỗ trợ sự tiếp hợp của X và Y trong giảm phân.'
+            },
+            PAR1_Y: { 
+                id: 'PAR1_Y', 
+                name: 'PAR1 – Vùng tương đồng', 
+                badge: 'Mút ngắn (p)', 
+                desc: 'PAR1 là vùng tương đồng trên NST X và Y, nằm ở đầu mút nhánh ngắn.', 
+                extra: 'Vùng tương đồng trên X và Y có các trình tự DNA và gene tương ứng, hỗ trợ sự tiếp hợp của X và Y trong giảm phân.' 
+            },
+            PAR2_X: { 
+                id: 'PAR2_X', 
+                name: 'PAR2 – Vùng tương đồng', 
+                badge: 'Mút dài (q)', 
+                desc: 'PAR2 là vùng tương đồng trên NST X và Y, nằm ở đầu mút nhánh dài.', 
+                extra: 'Vùng tương đồng trên X và Y có các trình tự DNA và gene tương ứng, hỗ trợ sự tiếp hợp của X và Y trong giảm phân.' 
+            },
+            PAR2_Y: { 
+                id: 'PAR2_Y', 
+                name: 'PAR2 – Vùng tương đồng', 
+                badge: 'Mút dài (q)', 
+                desc: 'PAR2 trên NST Y là vùng tương đồng với PAR2 trên NST X, nằm ở đầu mút nhánh dài.', 
+                extra: 'Vùng tương đồng trên X và Y có các trình tự DNA và gene tương ứng, hỗ trợ sự tiếp hợp của X và Y trong giảm phân.' 
+            },
+            SRY: { 
+                id: 'SRY', 
+                name: 'Gene SRY', 
+                badge: 'Sex-determining Region Y',
+                desc: 'Ở người, gene SRY nằm trên vùng không tương đồng của NST Y và quy định giới tính nam.',
+                extra: 'Các đột biến trên gen SRY thường dẫn đến sự gián đoạn trong quá trình biệt hóa giới tính nam, khiến cơ thể không phát triển các đặc điểm sinh học nam như bình thường dù có cặp nhiễm sắc thể giới tính là XY.' 
+            },
+            SPECIFIC_X: { 
+                id: 'SPECIFIC_X', 
+                name: 'Vùng không tương đồng trên X', 
+                badge: 'Nhánh dài/ngắn X', 
+                desc: 'Mang các gene đặc trưng không có allele tương ứng trên Y.', 
+                extra: 'Các gene quy định bệnh mù màu, máu khó đông...nằm ở vùng không tương đồng trên X, không có allele tương ứng trên Y.'
+            },
+            SPECIFIC_Y: { 
+                id: 'SPECIFIC_Y', 
+                name: 'Vùng không tương đồng trên Y', 
+                badge: 'Nhánh Y', 
+                desc: 'Mang các gene đặc trưng không có allele tương ứng trên X.', 
+                extra: 'Gene SRY nằm ở vùng không tương đồng trên Y, không có allele tương ứng trên X.'
+            }
+        };
+
+        function createCentromereMesh(radius, height) {
+            const group = new THREE.Group();
+            const geo = new THREE.CylinderGeometry(radius * 0.65, radius * 0.65, height, 16);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.85 });
+            const cylinder = new THREE.Mesh(geo, mat);
+            cylinder.userData = { region: REGIONS.CENTROMERE };
+            const ringGeo = new THREE.TorusGeometry(radius * 0.85, height * 0.2, 12, 24);
+            const ringMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x0284c7, emissiveIntensity: 0.8 });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = Math.PI / 2;
+            ring.userData = { region: REGIONS.CENTROMERE };
+            group.add(cylinder, ring);
+            return group;
+        }
+
+        function rebuildChromosomes() {
+            while (chromosomeXGroup.children.length > 0) chromosomeXGroup.remove(chromosomeXGroup.children[0]);
+            while (chromosomeYGroup.children.length > 0) chromosomeYGroup.remove(chromosomeYGroup.children[0]);
+            const isDb = isDuplicatedState;
+            if (isDb) {
+                const leftP = createOrganicChromatidMesh([new THREE.Vector3(-1.0, 3.8, 0), new THREE.Vector3(-0.6, 2.0, 0.1), new THREE.Vector3(-0.15, 0.3, 0)], 0.38, COLORS.X_BODY, REGIONS.SPECIFIC_X);
+                const leftQ = createOrganicChromatidMesh([new THREE.Vector3(-0.15, 0.3, 0), new THREE.Vector3(-0.6, -1.8, 0.1), new THREE.Vector3(-1.1, -3.8, 0)], 0.4, COLORS.X_BODY, REGIONS.SPECIFIC_X);
+                const rightP = createOrganicChromatidMesh([new THREE.Vector3(1.0, 3.8, 0), new THREE.Vector3(0.6, 2.0, -0.1), new THREE.Vector3(0.15, 0.3, 0)], 0.38, COLORS.X_BODY, REGIONS.SPECIFIC_X);
+                const rightQ = createOrganicChromatidMesh([new THREE.Vector3(0.15, 0.3, 0), new THREE.Vector3(0.6, -1.8, -0.1), new THREE.Vector3(1.1, -3.8, 0)], 0.4, COLORS.X_BODY, REGIONS.SPECIFIC_X);
+                
+                const par1XL = createOrganicChromatidMesh([new THREE.Vector3(-1.0, 3.8, 0), new THREE.Vector3(-0.85, 3.2, 0.05)], 0.4, COLORS.PAR, REGIONS.PAR1_X);
+                const par1XR = createOrganicChromatidMesh([new THREE.Vector3(1.0, 3.8, 0), new THREE.Vector3(0.85, 3.2, -0.05)], 0.4, COLORS.PAR, REGIONS.PAR1_X);
+                const par2XL = createOrganicChromatidMesh([new THREE.Vector3(-0.95, -3.2, 0.05), new THREE.Vector3(-1.1, -3.8, 0)], 0.42, COLORS.PAR, REGIONS.PAR2_X);
+                const par2XR = createOrganicChromatidMesh([new THREE.Vector3(0.95, -3.2, -0.05), new THREE.Vector3(1.1, -3.8, 0)], 0.42, COLORS.PAR, REGIONS.PAR2_X);
+                
+                const centroX = createCentromereMesh(0.42, 0.35); centroX.position.set(0, 0.3, 0);
+                chromosomeXGroup.add(leftP, leftQ, rightP, rightQ, par1XL, par1XR, par2XL, par2XR, centroX);
+            } else {
+                const mainX = createOrganicChromatidMesh([new THREE.Vector3(0, 3.6, 0), new THREE.Vector3(0, 0.3, 0), new THREE.Vector3(0, -3.6, 0)], 0.45, COLORS.X_BODY, REGIONS.SPECIFIC_X);
+                const par1X = createOrganicChromatidMesh([new THREE.Vector3(0, 3.6, 0), new THREE.Vector3(0, 3.0, 0)], 0.46, COLORS.PAR, REGIONS.PAR1_X);
+                const par2X = createOrganicChromatidMesh([new THREE.Vector3(0, -3.0, 0), new THREE.Vector3(0, -3.6, 0)], 0.46, COLORS.PAR, REGIONS.PAR2_X);
+                const centroX = createCentromereMesh(0.46, 0.35); centroX.position.set(0, 0.3, 0);
+                chromosomeXGroup.add(mainX, par1X, par2X, centroX);
+            }
+
+            if (isDb) {
+                const leftPY = createOrganicChromatidMesh([new THREE.Vector3(-0.5, 1.6, 0), new THREE.Vector3(-0.1, 0.3, 0)], 0.35, COLORS.Y_BODY, REGIONS.SPECIFIC_Y);
+                const rightPY = createOrganicChromatidMesh([new THREE.Vector3(0.5, 1.6, 0), new THREE.Vector3(0.1, 0.3, 0)], 0.35, COLORS.Y_BODY, REGIONS.SPECIFIC_Y);
+                const leftQY = createOrganicChromatidMesh([new THREE.Vector3(-0.1, 0.3, 0), new THREE.Vector3(-0.45, -1.6, 0)], 0.36, COLORS.Y_BODY, REGIONS.SPECIFIC_Y);
+                const rightQY = createOrganicChromatidMesh([new THREE.Vector3(0.1, 0.3, 0), new THREE.Vector3(0.45, -1.6, 0)], 0.36, COLORS.Y_BODY, REGIONS.SPECIFIC_Y);
+                
+                const par1YL = createOrganicChromatidMesh([new THREE.Vector3(-0.5, 1.6, 0), new THREE.Vector3(-0.42, 1.35, 0)], 0.355, COLORS.PAR, REGIONS.PAR1_Y);
+                const par1YR = createOrganicChromatidMesh([new THREE.Vector3(0.5, 1.6, 0), new THREE.Vector3(0.42, 1.35, 0)], 0.355, COLORS.PAR, REGIONS.PAR1_Y);
+                const sryL = createOrganicChromatidMesh([new THREE.Vector3(-0.32, 1.0, 0), new THREE.Vector3(-0.25, 0.75, 0)], 0.365, COLORS.SRY, REGIONS.SRY);
+                const sryR = createOrganicChromatidMesh([new THREE.Vector3(0.32, 1.0, 0), new THREE.Vector3(0.25, 0.75, 0)], 0.365, COLORS.SRY, REGIONS.SRY);
+                const par2YL = createOrganicChromatidMesh([new THREE.Vector3(-0.38, -1.25, 0), new THREE.Vector3(-0.45, -1.6, 0)], 0.365, COLORS.PAR, REGIONS.PAR2_Y);
+                const par2YR = createOrganicChromatidMesh([new THREE.Vector3(0.38, -1.25, 0), new THREE.Vector3(0.45, -1.6, 0)], 0.365, COLORS.PAR, REGIONS.PAR2_Y);
+                
+                const centroY = createCentromereMesh(0.38, 0.32); centroY.position.set(0, 0.3, 0);
+                chromosomeYGroup.add(leftPY, rightPY, leftQY, rightQY, par1YL, par1YR, sryL, sryR, par2YL, par2YR, centroY);
+            } else {
+                const mainY = createOrganicChromatidMesh([new THREE.Vector3(0, 1.6, 0), new THREE.Vector3(0, 0.3, 0), new THREE.Vector3(0, -1.6, 0)], 0.4, COLORS.Y_BODY, REGIONS.SPECIFIC_Y);
+                const par1Y = createOrganicChromatidMesh([new THREE.Vector3(0, 1.6, 0), new THREE.Vector3(0, 1.35, 0)], 0.41, COLORS.PAR, REGIONS.PAR1_Y);
+                const sryY = createOrganicChromatidMesh([new THREE.Vector3(0, 1.0, 0), new THREE.Vector3(0, 0.75, 0)], 0.42, COLORS.SRY, REGIONS.SRY);
+                const par2Y = createOrganicChromatidMesh([new THREE.Vector3(0, -1.25, 0), new THREE.Vector3(0, -1.6, 0)], 0.41, COLORS.PAR, REGIONS.PAR2_Y);
+                const centroY = createCentromereMesh(0.41, 0.32); centroY.position.set(0, 0.3, 0);
+                chromosomeYGroup.add(mainY, par1Y, sryY, par2Y, centroY);
+            }
+
+            if (currentPairType === 'XX') {
+                while (chromosomeYGroup.children.length > 0) chromosomeYGroup.remove(chromosomeYGroup.children[0]);
+                chromosomeXGroup.children.forEach(child => {
+                    const copy = child.clone(true);
+                    chromosomeYGroup.add(copy);
+                });
+            }
+        }
+
+        function createConnectorLines() {
+            while(connectorLinesGroup.children.length > 0) connectorLinesGroup.remove(connectorLinesGroup.children[0]);
+            const createRay = (yX, yY, name) => {
+                const mat = new THREE.LineDashedMaterial({ color: COLORS.PAR, dashSize: 0.2, gapSize: 0.1, transparent: true, opacity: 0.9 });
+                const isMobile = window.innerWidth < 768;
+                const offset = isMobile ? 1.8 : 2.5;
+                const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-offset + 0.8, yX, 0), new THREE.Vector3(offset - 0.5, yY, 0)]);
+                const line = new THREE.Line(geo, mat);
+                line.computeLineDistances();
+                line.name = name; line.visible = false;
+                return line;
+            };
+            connectorLinesGroup.add(createRay(3.6, 1.5, 'LINE_PAR1'));
+            connectorLinesGroup.add(createRay(-3.6, -1.5, 'LINE_PAR2'));
+        }
+
+        const CALLOUT_DATA = [
+            { id: 'PAR1_X', text: 'PAR1', sub: 'PAR1 (X)', group: () => chromosomeXGroup, pos: new THREE.Vector3(-0.9, 3.6, 0), regionKey: 'PAR1_X' },
+            { 
+                id: 'PAR1_Y', 
+                text: 'PAR1', 
+                sub: 'PAR1', 
+                group: () => chromosomeYGroup, 
+                getPos: () => currentPairType === 'XX' ? new THREE.Vector3(0.9, 3.6, 0) : new THREE.Vector3(0.5, 1.5, 0), 
+                regionKey: 'PAR1_Y' 
+            },
+            { id: 'SPECIFIC_X', text: 'Vùng đ.trưng X', sub: 'Không tương đồng', group: () => chromosomeXGroup, pos: new THREE.Vector3(-0.8, -1.8, 0), regionKey: 'SPECIFIC_X' },
+            { 
+                id: 'SPECIFIC_Y', 
+                text: 'Vùng đ.trưng Y', 
+                sub: 'Không tương đồng', 
+                group: () => chromosomeYGroup, 
+                getPos: () => currentPairType === 'XX' ? new THREE.Vector3(0.8, -1.8, 0) : new THREE.Vector3(0.4, -0.6, 0), 
+                regionKey: 'SPECIFIC_Y' 
+            },
+            { id: 'SRY', text: 'SRY', sub: 'Gene Nam', group: () => chromosomeYGroup, getPos: () => new THREE.Vector3(0.35, 0.8, 0), regionKey: 'SRY', highlight: true },
+            { id: 'CENTRO_X', text: 'Tâm động', sub: 'Thắt sơ cấp', group: () => chromosomeXGroup, pos: new THREE.Vector3(-0.5, 0.3, 0), regionKey: 'CENTROMERE' },
+            { id: 'PAR2_X', text: 'PAR2', sub: 'PAR2 (X)', group: () => chromosomeXGroup, pos: new THREE.Vector3(-1.0, -3.6, 0), regionKey: 'PAR2_X' },
+            { 
+                id: 'PAR2_Y', 
+                text: 'PAR2', 
+                sub: 'PAR2', 
+                group: () => chromosomeYGroup, 
+                getPos: () => currentPairType === 'XX' ? new THREE.Vector3(1.0, -3.6, 0) : new THREE.Vector3(0.45, -1.5, 0), 
+                regionKey: 'PAR2_Y' 
+            },
+        ];
+
+        let calloutElements = [];
+        function setupCalloutElements() {
+            const container = document.getElementById('callouts-container');
+            container.innerHTML = '';
+            calloutElements = [];
+            CALLOUT_DATA.forEach(item => {
+                const card = document.createElement('div');
+                const isSRY = item.id === 'SRY';
+                card.className = `callout-card glass-panel px-2 py-0.5 rounded-lg border flex items-center gap-1 cursor-pointer ${
+                    isSRY ? 'sry-highlight-card text-amber-200' : 'border-cyan-500/30 text-cyan-200'
+                }`;
+                card.innerHTML = `
+                    <div class="w-1.5 h-1.5 rounded-full ${isSRY ? 'bg-amber-300 animate-ping' : 'bg-cyan-400'} shrink-0"></div>
+                    <span class="text-[9px] font-black">${item.text}</span>
+                `;
+                const handleClick = (e) => {
+                    e.stopPropagation(); e.preventDefault();
+                    if (REGIONS[item.regionKey]) triggerRegionSelect(REGIONS[item.regionKey]);
+                };
+                card.addEventListener('click', handleClick);
+                card.addEventListener('touchend', handleClick);
+                container.appendChild(card);
+                calloutElements.push({ element: card, data: item });
+            });
+        }
+
+        function updateCalloutPositions() {
+            const svg = document.getElementById('leader-lines-svg');
+            if (!labelsVisible) {
+                calloutElements.forEach(item => item.element.style.opacity = '0');
+                svg.innerHTML = '';
+                return;
+            }
+            const widthHalf = window.innerWidth / 2, heightHalf = window.innerHeight / 2;
+            const tempV = new THREE.Vector3();
+            let svgLinesHtml = '';
+            const isMobile = window.innerWidth < 768;
+            const lineLen = isMobile ? 35 : 80;
+            calloutElements.forEach(item => {
+                if ((item.data.id === 'SRY' || item.data.id === 'SPECIFIC_Y') && currentPairType === 'XX') {
+                    item.element.style.opacity = '0'; return;
+                }
+                const worldPos = item.data.getPos ? item.data.getPos().clone() : item.data.pos.clone();
+                item.data.group().localToWorld(worldPos);
+                tempV.copy(worldPos);
+                tempV.project(camera);
+                if (tempV.z > 1 || Math.abs(tempV.x) > 1.1 || Math.abs(tempV.y) > 1.1) {
+                    item.element.style.opacity = '0'; return;
+                }
+                const targetX = (tempV.x * widthHalf) + widthHalf;
+                const targetY = -(tempV.y * heightHalf) + heightHalf;
+                const isLeft = worldPos.x < 0;
+                const cardX = isLeft ? targetX - lineLen : targetX + lineLen;
+                const cardY = targetY;
+                item.element.style.transform = `translate3d(-50%, -50%, 0) translate3d(${cardX}px, ${cardY}px, 0px)`;
+                item.element.style.opacity = '1';
+                const strokeColor = item.data.id === 'SRY' ? '#ffd700' : '#00f2fe';
+                svgLinesHtml += `<line x1="${targetX}" y1="${targetY}" x2="${cardX}" y2="${cardY}" stroke="${strokeColor}" stroke-width="1" opacity="0.7"/>`;
+            });
+            svg.innerHTML = svgLinesHtml;
+        }
+
+        function triggerRegionSelect(regionData) {
+            document.getElementById('info-title').innerText = regionData.name;
+            document.getElementById('info-badge').innerText = regionData.badge;
+            document.getElementById('info-description').innerText = regionData.desc;
+            
+            const extraContainer = document.getElementById('info-extra');
+            extraContainer.innerHTML = `<div class="flex items-start gap-1.5"><i class="fa-solid fa-circle-dot text-cyan-400 text-[10px] mt-0.5 shrink-0"></i><span>${regionData.extra}</span></div>`;
+            
+            document.getElementById('info-drawer').classList.remove('hidden');
+            resetHighlights();
+            
+            if (regionData.id.includes('PAR1')) {
+                highlightGroupRegion(chromosomeXGroup, 'PAR1_X', COLORS.HIGHLIGHT);
+                highlightGroupRegion(chromosomeYGroup, currentPairType === 'XX' ? 'PAR1_X' : 'PAR1_Y', COLORS.HIGHLIGHT);
+                if (currentPairType === 'XY') setConnectorVisibility('LINE_PAR1', true);
+            } else if (regionData.id.includes('PAR2')) {
+                highlightGroupRegion(chromosomeXGroup, 'PAR2_X', COLORS.HIGHLIGHT);
+                highlightGroupRegion(chromosomeYGroup, currentPairType === 'XX' ? 'PAR2_X' : 'PAR2_Y', COLORS.HIGHLIGHT);
+                if (currentPairType === 'XY') setConnectorVisibility('LINE_PAR2', true);
+            } else if (regionData.id === 'SRY') {
+                highlightGroupRegion(chromosomeYGroup, 'SRY', COLORS.HIGHLIGHT);
+            } else if (regionData.id === 'CENTROMERE') {
+                highlightGroupRegion(chromosomeXGroup, 'CENTROMERE', COLORS.HIGHLIGHT);
+                highlightGroupRegion(chromosomeYGroup, 'CENTROMERE', COLORS.HIGHLIGHT);
+            } else if (regionData.id === 'SPECIFIC_X') {
+                highlightGroupRegion(chromosomeXGroup, 'SPECIFIC_X', COLORS.HIGHLIGHT);
+            } else if (regionData.id === 'SPECIFIC_Y') {
+                highlightGroupRegion(chromosomeYGroup, 'SPECIFIC_Y', COLORS.HIGHLIGHT);
+            }
+        }
+
+        function highlightGroupRegion(group, regionId, hexColor) {
+            group.traverse(child => {
+                if (child.userData && child.userData.region && child.userData.region.id === regionId) {
+                    if (child.material) child.material.color.setHex(hexColor);
+                }
+            });
+        }
+
+        function resetHighlights() {
+            rebuildChromosomes();
+            setConnectorVisibility('LINE_PAR1', false);
+            setConnectorVisibility('LINE_PAR2', false);
+        }
+
+        function setConnectorVisibility(name, visible) {
+            const l = connectorLinesGroup.getObjectByName(name);
+            if (l) l.visible = visible;
+        }
+
+        function showBanner(msg) {
+            const banner = document.getElementById('info-banner');
+            document.getElementById('info-banner-text').innerText = msg;
+            banner.style.opacity = '1';
+            setTimeout(() => { banner.style.opacity = '0'; }, 3000);
+        }
+
+        function updateLayoutForMobile() {
+            const isMobile = window.innerWidth < 768;
+            const offset = isMobile ? 1.8 : 2.5;
+            if (chromosomeXGroup) chromosomeXGroup.position.set(-offset, 0, 0);
+            if (chromosomeYGroup) chromosomeYGroup.position.set(offset, 0, 0);
+            createConnectorLines();
+        }
+
+        function init3D() {
+            const container = document.getElementById('webgl-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050811, 0.02);
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            camera.position.set(0, 0, 16);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 30;
+            controls.minDistance = 5;
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            const dirLight1 = new THREE.DirectionalLight(0x00f2fe, 1.2);
+            dirLight1.position.set(10, 15, 10);
+            const dirLight2 = new THREE.DirectionalLight(0xff2a5f, 0.8);
+            dirLight2.position.set(-10, -10, -10);
+            scene.add(ambientLight, dirLight1, dirLight2);
+            chromatinBumpTex = generateChromatinTexture();
+            chromosomeXGroup = new THREE.Group();
+            chromosomeYGroup = new THREE.Group();
+            connectorLinesGroup = new THREE.Group();
+            scene.add(chromosomeXGroup, chromosomeYGroup, connectorLinesGroup);
+            updateLayoutForMobile();
+            rebuildChromosomes();
+            setupCalloutElements();
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            window.addEventListener('resize', () => {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                updateLayoutForMobile();
+            });
+            const handlePointerDown = (e) => {
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects([...chromosomeXGroup.children, ...chromosomeYGroup.children], true);
+                if (intersects.length > 0) {
+                    let obj = intersects[0].object;
+                    while (obj && !obj.userData.region && obj.parent) obj = obj.parent;
+                    if (obj && obj.userData && obj.userData.region) {
+                        triggerRegionSelect(obj.userData.region);
+                    }
+                }
+            };
+            renderer.domElement.addEventListener('click', handlePointerDown);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (chromosomeXGroup && chromosomeYGroup && currentMode === 'explore') {
+                chromosomeXGroup.rotation.y += 0.002;
+                chromosomeYGroup.rotation.y += 0.002;
+            }
+            updateCalloutPositions();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        window.addEventListener('load', () => {
+            // Không để lỗi khởi tạo WebGL/Three.js chặn các sự kiện của phần thử thách.
+            document.getElementById('btn-open-quiz').onclick = openQuizModal;
+            document.getElementById('btn-bar-quiz').onclick = openQuizModal;
+            const studentInfoForm = document.getElementById('form-student-info');
+            if (studentInfoForm) {
+                studentInfoForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+                    startQuizWithStudentInfo();
+                });
+                const startButton = studentInfoForm.querySelector('button[type="submit"]');
+                if (startButton) {
+                    startButton.addEventListener('click', function(event) {
+                        event.preventDefault();
+                        startQuizWithStudentInfo();
+                    });
+                }
+            }
+            document.getElementById('close-quiz').onclick = () => document.getElementById('quiz-modal').classList.add('hidden');
+            document.getElementById('btn-close-summary').onclick = () => document.getElementById('quiz-modal').classList.add('hidden');
+            
+            document.getElementById('btn-quiz-next').onclick = () => {
+                currentQuizIndex++;
+                if (currentQuizIndex < QUIZ_DATA.length) renderQuizQuestion();
+                else showQuizSummary();
+            };
+            document.getElementById('btn-restart-quiz').onclick = startQuizWithStudentInfo;
+            
+            document.getElementById('btn-quiz-view-3d').onclick = () => {
+                document.getElementById('quiz-modal').classList.add('hidden');
+                const regionKey = QUIZ_DATA[currentQuizIndex].targetRegion;
+                if (REGIONS[regionKey]) triggerRegionSelect(REGIONS[regionKey]);
+            };
+
+            document.getElementById('touch-zoom-in').onclick = () => camera.position.multiplyScalar(0.85);
+            document.getElementById('touch-zoom-out').onclick = () => camera.position.multiplyScalar(1.15);
+            document.getElementById('btn-reset-view').onclick = () => {
+                camera.position.set(0, 0, 16);
+                controls.reset();
+                chromosomeXGroup.rotation.set(0,0,0);
+                chromosomeYGroup.rotation.set(0,0,0);
+                resetHighlights();
+                showBanner('Đã đặt lại góc nhìn chuẩn');
+            };
+            document.getElementById('btn-toggle-labels').onclick = () => {
+                labelsVisible = !labelsVisible;
+                document.getElementById('label-btn-text').innerText = labelsVisible ? 'Ẩn nhãn' : 'Hiện nhãn';
+                showBanner(labelsVisible ? 'Đã hiển thị chú thích' : 'Đã ẩn chú thích');
+            };
+
+            document.getElementById('pair-xy').onclick = function() {
+                this.classList.add('active'); document.getElementById('pair-xx').classList.remove('active');
+                currentPairType = 'XY'; rebuildChromosomes(); setupCalloutElements();
+                showBanner('Chuyển sang cặp XY (Nam)');
+            };
+            document.getElementById('pair-xx').onclick = function() {
+                this.classList.add('active'); document.getElementById('pair-xy').classList.remove('active');
+                currentPairType = 'XX'; rebuildChromosomes(); setupCalloutElements();
+                showBanner('Chuyển sang cặp XX (Nữ)');
+            };
+
+            document.getElementById('btn-state-single').onclick = function() {
+                this.classList.add('active'); document.getElementById('btn-state-double').classList.remove('active');
+                isDuplicatedState = false; rebuildChromosomes();
+                showBanner('NST chưa nhân đôi: mỗi NST gồm một chromatid');
+            };
+            document.getElementById('btn-state-double').onclick = function() {
+                this.classList.add('active'); document.getElementById('btn-state-single').classList.remove('active');
+                isDuplicatedState = true; rebuildChromosomes();
+                showBanner('NST đã nhân đôi: mỗi NST gồm hai chromatid chị em');
+            };
+
+            document.getElementById('mode-explore').onclick = function() {
+                this.classList.add('active'); document.getElementById('mode-compare').classList.remove('active');
+                currentMode = 'explore';
+                document.getElementById('comparison-modal').classList.add('hidden');
+                showBanner('Chế độ xoay tự do 360°');
+            };
+            document.getElementById('mode-compare').onclick = function() {
+                this.classList.add('active'); document.getElementById('mode-explore').classList.remove('active');
+                currentMode = 'compare';
+                chromosomeXGroup.rotation.set(0,0,0); chromosomeYGroup.rotation.set(0,0,0);
+                document.getElementById('comparison-modal').classList.remove('hidden');
+                showBanner('Chế độ so sánh đặc điểm X - Y');
+            };
+
+            document.getElementById('btn-show-spec-x').onclick = () => {
+                triggerRegionSelect(REGIONS.SPECIFIC_X);
+            };
+            document.getElementById('btn-show-spec-y').onclick = () => {
+                if (currentPairType === 'XX') {
+                    showBanner('Cặp XX không có Vùng đặc trưng Y');
+                } else {
+                    triggerRegionSelect(REGIONS.SPECIFIC_Y);
+                }
+            };
+            document.getElementById('btn-show-diff').onclick = () => {
+                if (currentPairType === 'XX') showBanner('Cặp XX không có Gene SRY');
+                else triggerRegionSelect(REGIONS.SRY);
+            };
+
+            document.getElementById('btn-open-menu-mobile').onclick = () => {
+                document.getElementById('mobile-control-drawer').classList.remove('translate-y-full');
+            };
+            document.getElementById('close-mobile-drawer').onclick = () => {
+                document.getElementById('mobile-control-drawer').classList.add('translate-y-full');
+            };
+            document.getElementById('btn-drawer-apply').onclick = () => {
+                document.getElementById('mobile-control-drawer').classList.add('translate-y-full');
+            };
+            document.getElementById('close-info-drawer').onclick = () => {
+                document.getElementById('info-drawer').classList.add('hidden'); resetHighlights();
+            };
+            document.getElementById('close-comp-modal').onclick = () => {
+                document.getElementById('comparison-modal').classList.add('hidden');
+            };
+            // Mô hình 3D khởi tạo sau khi đã gắn đầy đủ sự kiện cho bài thử thách.
+            try {
+                if (typeof THREE !== 'undefined') {
+                    init3D();
+                    animate();
+                } else {
+                    console.warn('Three.js chưa tải được; bài thử thách vẫn có thể hoạt động.');
+                }
+            } catch (error) {
+                console.error('Lỗi khởi tạo mô hình 3D:', error);
+            }
+        });
+    </script>
+</body>
+</html>
